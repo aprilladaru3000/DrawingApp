@@ -9,10 +9,29 @@ let lastX = 0;
 let lastY = 0;
 let brushSize = 5;
 let brushColor = '#000000';
+let isEraserMode = false;
+let eraserBtn;
+
 
 // Elemen DOM yang akan digunakan
 let colorPicker, brushSizeSlider, brushSizeValue;
 let clearBtn, saveBtn, brushCursor;
+
+function toggleEraser() {
+    isEraserMode = !isEraserMode;
+
+    if (isEraserMode) {
+        ctx.globalCompositeOperation = 'destination-out';
+        eraserBtn.classList.add('btn-danger');
+        showNotification('Mode penghapus aktif', 'info');
+    } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = brushColor;
+        eraserBtn.classList.remove('btn-danger');
+        showNotification('Mode penghapus dimatikan', 'info');
+    }
+}
+
 
 // Fungsi inisialisasi aplikasi
 function initApp() {
@@ -29,7 +48,9 @@ function initApp() {
     clearBtn = document.getElementById('clearBtn');
     saveBtn = document.getElementById('saveBtn');
     brushCursor = document.getElementById('brushCursor');
-    
+    eraserBtn = document.getElementById('eraserBtn');
+    eraserBtn.addEventListener('click', toggleEraser);
+
     // Setup canvas
     setupCanvas();
     
