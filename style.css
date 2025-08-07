@@ -270,3 +270,22 @@ body {
     outline: 2px solid #667eea;
     outline-offset: 2px;
 } 
+
+/* Styling untuk tombol undo/redo */
+#undoBtn {
+    background: linear-gradient(135deg, #ffd43b, #fcc419);
+    color: #333;
+}
+
+#redoBtn {
+    background: linear-gradient(135deg, #74c0fc, #4dabf7);
+    color: white;
+}
+
+/* Styling untuk tombol yang disabled */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}

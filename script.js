@@ -11,11 +11,76 @@ let brushSize = 5;
 let brushColor = '#000000';
 let isEraserMode = false;
 let eraserBtn;
+let drawingHistory = [];
+let historyIndex = -1;
 
 
 // Elemen DOM yang akan digunakan
 let colorPicker, brushSizeSlider, brushSizeValue;
 let clearBtn, saveBtn, brushCursor;
+
+function saveCanvasState() {
+    // Hapus semua state setelah historyIndex (jika ada)
+    if (historyIndex < drawingHistory.length - 1) {
+        drawingHistory = drawingHistory.slice(0, historyIndex + 1);
+    }
+    
+    // Simpan state canvas saat ini
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    drawingHistory.push(imageData);
+    historyIndex++;
+    
+    // Batasi jumlah history untuk menghindari memory leak
+    if (drawingHistory.length > 50) {
+        drawingHistory.shift();
+        historyIndex--;
+    }
+    
+    // Update status tombol
+    updateUndoRedoButtons();
+    
+    console.log('💾 State canvas disimpan. History:', drawingHistory.length, 'Index:', historyIndex);
+}
+
+// Fungsi untuk mengembalikan ke state sebelumnya (undo)
+function undo() {
+    if (historyIndex <= 0) return; // Tidak ada yang bisa di-undo
+    
+    historyIndex--;
+    restoreCanvasState();
+    console.log('↩️ Undo ke index:', historyIndex);
+}
+
+// Fungsi untuk mengulang state yang di-undo (redo)
+function redo() {
+    if (historyIndex >= drawingHistory.length - 1) return; // Tidak ada yang bisa di-redo
+    
+    historyIndex++;
+    restoreCanvasState();
+    console.log('↪️ Redo ke index:', historyIndex);
+}
+
+// Fungsi untuk mengembalikan canvas ke state yang disimpan
+function restoreCanvasState() {
+    ctx.putImageData(drawingHistory[historyIndex], 0, 0);
+    updateUndoRedoButtons();
+}
+
+// Fungsi untuk mengupdate status tombol undo/redo
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    
+    undoBtn.disabled = historyIndex <= 0;
+    redoBtn.disabled = historyIndex >= drawingHistory.length - 1;
+    
+    // Tambahkan styling untuk tombol yang disabled
+    undoBtn.style.opacity = undoBtn.disabled ? '0.5' : '1';
+    redoBtn.style.opacity = redoBtn.disabled ? '0.5' : '1';
+    undoBtn.style.cursor = undoBtn.disabled ? 'not-allowed' : 'pointer';
+    redoBtn.style.cursor = redoBtn.disabled ? 'not-allowed' : 'pointer';
+}
+
 
 function toggleEraser() {
     isEraserMode = !isEraserMode;
@@ -50,6 +115,8 @@ function initApp() {
     brushCursor = document.getElementById('brushCursor');
     eraserBtn = document.getElementById('eraserBtn');
     eraserBtn.addEventListener('click', toggleEraser);
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
 
     // Setup canvas
     setupCanvas();
@@ -76,6 +143,8 @@ function setupCanvas() {
     // Mengisi canvas dengan warna putih
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    saveCanvasState();
     
     console.log(`📐 Canvas diatur dengan ukuran: ${canvas.width}x${canvas.height}`);
 }
@@ -142,6 +211,9 @@ function draw(e) {
 
 // Berhenti menggambar saat mouse dilepas
 function stopDrawing() {
+    if (isDrawing) {
+        saveCanvasState();
+    }
     isDrawing = false;
     console.log('⏹️ Berhenti menggambar');
 }
@@ -223,6 +295,7 @@ function clearCanvas() {
     if (confirm('Apakah Anda yakin ingin menghapus semua gambar?')) {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        saveCanvasState(); // Simpan state setelah clear
         console.log('🗑️ Canvas berhasil dibersihkan');
     }
 }
@@ -340,6 +413,17 @@ document.addEventListener('keydown', function(e) {
     // Escape untuk berhenti menggambar
     if (e.key === 'Escape') {
         isDrawing = false;
+    }
+    // Ctrl/Cmd + Z untuk undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+    }
+    
+    // Ctrl/Cmd + Y untuk redo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
     }
 });
 
