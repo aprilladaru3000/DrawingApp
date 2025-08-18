@@ -9,10 +9,50 @@ let isEraserMode = false;
 let eraserBtn;
 let drawingHistory = [];
 let historyIndex = -1;
+let isShiftPressed = false;
+let startX = 0;
+let startY = 0;
 
 // Elemen DOM yang akan digunakan
 let colorPicker, brushSizeSlider, brushSizeValue;
 let clearBtn, saveBtn, brushCursor;
+
+function handleKeyDown(e) {
+    if (e.key === 'Shift') {
+        isShiftPressed = true;
+    }
+    
+    // Keep your existing keyboard shortcuts
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveAsPNG();
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        clearCanvas();
+    }
+    if (e.key === 'Escape') {
+        isDrawing = false;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+    }
+}
+
+function handleKeyUp(e) {
+    if (e.key === 'Shift') {
+        isShiftPressed = false;
+        // When releasing shift, save the current state if we were drawing
+        if (isDrawing) {
+            saveCanvasState();
+        }
+    }
+}
 
 function saveCanvasState() {
     if (historyIndex < drawingHistory.length - 1) {
@@ -116,7 +156,7 @@ function setupCanvas() {
 
 function createCanvasBackground() {
     // Paper texture
-    ctx.fillStyle = '#f5f5f5';
+    ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Add some paper texture noise
@@ -145,6 +185,9 @@ function setupEventListeners() {
     canvas.addEventListener('mousemove', updateBrushCursor);
     canvas.addEventListener('mouseenter', showBrushCursor);
     canvas.addEventListener('mouseleave', hideBrushCursor);
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
 }
 
 function setupDrawingContext() {
@@ -158,6 +201,8 @@ function setupDrawingContext() {
 function startDrawing(e) {
     isDrawing = true;
     [lastX, lastY] = getMousePos(canvas, e);
+    startX = lastX;  // Store the starting position
+    startY = lastY;
 }
 
 function draw(e) {
@@ -167,12 +212,27 @@ function draw(e) {
     
     const [currentX, currentY] = getMousePos(canvas, e);
     
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(currentX, currentY);
-    ctx.stroke();
-    
-    [lastX, lastY] = [currentX, currentY];
+    // If shift is pressed, draw a straight line from start to current position
+    if (isShiftPressed) {
+        // First, restore the canvas to the state before we started drawing
+        ctx.putImageData(drawingHistory[historyIndex], 0, 0);
+        
+        // Then draw the straight line
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+        
+        // Update last positions to current for smooth transition when releasing shift
+        [lastX, lastY] = [currentX, currentY];
+    } else {
+        // Normal freehand drawing
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+        [lastX, lastY] = [currentX, currentY];
+    }
 }
 
 function stopDrawing() {
